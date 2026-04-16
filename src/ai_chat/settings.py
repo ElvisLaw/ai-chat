@@ -5,44 +5,53 @@ This module provides Pydantic-based settings validation.
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     """Application settings with validation.
 
+    Automatically loads from environment variables.
     All API keys are optional to allow partial configuration.
     Users can configure only the LLM providers they want to use.
     """
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"  # Allow extra fields in .env
+    )
+
     openai_api_key: str | None = Field(
         default=None,
-        description="OpenAI API key for GPT models"
+        validation_alias="OPENAI_API_KEY"
     )
 
     anthropic_api_key: str | None = Field(
         default=None,
-        description="Anthropic API key for Claude models"
+        validation_alias="ANTHROPIC_API_KEY"
     )
 
     openai_base_url: str | None = Field(
         default=None,
-        description="Custom OpenAI API base URL (e.g., for MiniMax)"
+        validation_alias="OPENAI_BASE_URL"
     )
 
     model: str = Field(
         default="gpt-4",
-        description="Default LLM model to use"
+        validation_alias="MODEL"
     )
 
     max_tokens: int = Field(
         default=4096,
-        description="Maximum number of tokens in response"
+        validation_alias="MAX_TOKENS"
     )
 
     temperature: float = Field(
         default=0.7,
-        description="LLM temperature setting (0.0-2.0)"
+        validation_alias="TEMPERATURE"
     )
 
     def is_openai_configured(self) -> bool:

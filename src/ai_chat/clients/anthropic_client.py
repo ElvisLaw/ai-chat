@@ -36,7 +36,7 @@ class AnthropicClient(BaseLLMClient):
 
         Args:
             message: 用户消息。
-            **kwargs: 其他参数（system_prompt, model 覆盖等）。
+            **kwargs: 其他参数（system_prompt, model 覆盖等, conversation_messages 历史消息）。
 
         Returns:
             模型的响应文本。
@@ -46,13 +46,22 @@ class AnthropicClient(BaseLLMClient):
         """
         try:
             system_prompt = kwargs.pop("system_prompt", None)
+            conversation_messages = kwargs.pop("conversation_messages", None)
             max_tokens = kwargs.pop("max_tokens", 1024)
+
+            # 构建消息列表
+            messages = []
+            if conversation_messages:
+                for msg in conversation_messages:
+                    if msg["role"] != "system":
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+            messages.append({"role": "user", "content": message})
 
             response = self._client.messages.create(
                 model=kwargs.pop("model", self._model),
                 system=system_prompt,
                 max_tokens=max_tokens,
-                messages=[{"role": "user", "content": message}],
+                messages=messages,
                 **{**self._kwargs, **kwargs}
             )
             return response.content[0].text
@@ -64,7 +73,7 @@ class AnthropicClient(BaseLLMClient):
 
         Args:
             message: 用户消息。
-            **kwargs: 其他参数。
+            **kwargs: 其他参数（conversation_messages 历史消息）。
 
         Yields:
             响应内容块，逐块返回。
@@ -74,13 +83,22 @@ class AnthropicClient(BaseLLMClient):
         """
         try:
             system_prompt = kwargs.pop("system_prompt", None)
+            conversation_messages = kwargs.pop("conversation_messages", None)
             max_tokens = kwargs.pop("max_tokens", 1024)
+
+            # 构建消息列表
+            messages = []
+            if conversation_messages:
+                for msg in conversation_messages:
+                    if msg["role"] != "system":
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+            messages.append({"role": "user", "content": message})
 
             with self._client.messages.stream(
                 model=kwargs.pop("model", self._model),
                 system=system_prompt,
                 max_tokens=max_tokens,
-                messages=[{"role": "user", "content": message}],
+                messages=messages,
                 **{**self._kwargs, **kwargs}
             ) as stream:
                 for text in stream.text_stream:

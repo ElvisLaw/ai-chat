@@ -13,66 +13,16 @@ originSessionId: fc845397-edf5-4bb1-b74a-b4db1e5a3c41
 |--------|--------|--------|------|
 | `2026-04-16-init-ai-chat-project-structure` | spec-driven | ✓ archived | 项目初始化、目录结构、基础依赖 |
 | `2026-04-16-add-langchain-dependency` | spec-driven | ✓ archived | 添加 LangChain 依赖 |
-
----
-
-### 已完成 Changes
-
-| Change | Schema | Status | 描述 |
-|--------|--------|--------|------|
-| `implement-config-management` | spec-driven | ✓ complete | config.py, settings.py, .env.example |
+| `2026-04-16-implement-config-management` | spec-driven | ✓ archived | config.py, settings.py, .env.example |
+| `2026-04-16-implement-llm-clients` | spec-driven | ✓ archived | LLM 客户端（OpenAI/Anthropic/MiniMax） |
+| `2026-04-16-implement-api-interface` | spec-driven | ✓ archived | FastAPI Web API 接口（/health, /chat, /chat/stream） |
+| `2026-04-16-implement-conversation-management` | spec-driven | ✓ archived | 多轮对话管理（message-models, conversation-history, chat-service） |
 
 ---
 
 ### 待处理 Changes（按优先级）
 
-#### Change 2: implement-llm-clients（推荐下一步）
-**Schema:** spec-driven
-**描述:** 实现 LLM 客户端（OpenAI/Claude）
-
-**Capabilities:**
-- `llm-client-base`: 客户端基类
-- `openai-client`: OpenAI 实现
-- `anthropic-client`: Claude 实现
-- `client-registry`: 客户端工厂
-
----
-
-#### Change 2: implement-llm-clients
-**Schema:** spec-driven
-**描述:** 实现 LLM 客户端（OpenAI/Claude）
-
-**Capabilities:**
-- `llm-client-base`: 客户端基类
-- `openai-client`: OpenAI 实现
-- `anthropic-client`: Claude 实现
-- `client-registry`: 客户端工厂
-
-**Tasks:**
-- [ ] 2.1 创建 src/ai_chat/clients/base.py
-- [ ] 2.2 创建 src/ai_chat/clients/openai_client.py
-- [ ] 2.3 创建 src/ai_chat/clients/anthropic_client.py
-- [ ] 2.4 创建 src/ai_chat/clients/registry.py
-
----
-
-#### Change 3: implement-conversation-management
-**Schema:** spec-driven
-**描述:** 实现对话管理模块
-
-**Capabilities:**
-- `message-models`: 消息模型
-- `conversation-history`: 对话历史管理
-- `chat-service`: 聊天服务主类
-
-**Tasks:**
-- [ ] 3.1 创建 src/ai_chat/messages.py
-- [ ] 3.2 创建 src/ai_chat/conversation.py
-- [ ] 3.3 创建 src/ai_chat/chat.py
-
----
-
-#### Change 4: implement-cli-interface
+#### Change 6: implement-cli-interface
 **Schema:** spec-driven
 **描述:** 实现 CLI 命令行界面
 
@@ -84,15 +34,48 @@ originSessionId: fc845397-edf5-4bb1-b74a-b4db1e5a3c41
 
 ---
 
-#### Change 5: implement-advanced-features（可选）
+#### Change 7: implement-langchain-agent
 **Schema:** spec-driven
-**描述:** 高级功能
+**描述:** LangChain Agent 支持
 
 **Capabilities:**
-- `langchain-agent`: LangChain Agent 支持
-- `rag-support`: RAG 支持
-- `conversation-memory`: 多轮对话记忆
-- `tool-calling`: 工具调用
+- `agent-core`: Agent 核心实现
+- `agent-tools`: 内置工具集
+- `agent-chain`: 工具链配置
+
+---
+
+#### Change 8: implement-rag-support
+**Schema:** spec-driven
+**描述:** RAG（检索增强生成）支持
+
+**Capabilities:**
+- `document-loader`: 文档加载器
+- `text-splitter`: 文本分割器
+- `vector-store`: 向量存储
+- `retriever`: 检索器
+
+---
+
+#### Change 9: implement-conversation-memory
+**Schema:** spec-driven
+**描述:** 多轮对话记忆
+
+**Capabilities:**
+- `memory-buffer`: 对话缓冲
+- `memory-summary`: 对话摘要
+- `memory-persistence`: 记忆持久化
+
+---
+
+#### Change 10: implement-tool-calling
+**Schema:** spec-driven
+**描述:** 工具调用功能
+
+**Capabilities:**
+- `tool-registry`: 工具注册表
+- `tool-executor`: 工具执行器
+- `tool-definitions`: 工具定义规范
 
 ---
 
@@ -105,6 +88,8 @@ originSessionId: fc845397-edf5-4bb1-b74a-b4db1e5a3c41
 - pydantic>=2.0.0
 - langchain>=0.1.0
 - langchain-openai>=0.0.5
+- fastapi>=0.100.0
+- uvicorn>=0.23.0
 
 **Project Structure:**
 ```
@@ -112,10 +97,23 @@ ai-chat/
 ├── src/ai_chat/     # 主包
 │   ├── __init__.py
 │   ├── config.py    # 配置加载 ✓
-│   └── settings.py  # Pydantic 模型 ✓
+│   ├── settings.py  # Pydantic 模型 ✓
+│   ├── clients/     # LLM 客户端 ✓
+│   │   ├── __init__.py
+│   │   ├── base.py           # 抽象基类
+│   │   ├── openai_client.py  # OpenAI 客户端
+│   │   ├── anthropic_client.py # Anthropic 客户端
+│   │   └── factory.py        # 客户端工厂
+│   ├── conversation/  # 对话管理 ✓
+│   │   ├── __init__.py
+│   │   ├── models.py         # 消息模型
+│   │   ├── store.py          # 会话存储
+│   │   └── service.py        # 聊天服务
+│   └── api/          # Web API ✓
 ├── tests/           # 测试目录
 ├── config/          # 配置目录
 ├── docs/            # 文档目录
+├── openspec/        # OpenSpec 工作流
 ├── pyproject.toml   # 项目配置
 ├── requirements.txt # 依赖列表
 ├── .gitignore
@@ -127,7 +125,7 @@ ai-chat/
 
 ### 下一步建议
 
-使用 `/opsx:propose implement-llm-clients` 实现 LLM 客户端
+使用 `/opsx:new` 开始实现 implement-conversation-management
 
 ---
 

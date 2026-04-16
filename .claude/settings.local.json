@@ -10,7 +10,13 @@
       "Bash(openspec list *)",
       "Bash(openspec archive *)",
       "Bash(mv /Users/elvis/.claude/projects/-Users-elvis-Desktop-demo-project-ai-chat/memory/ai-chat-project-plan.md /Users/elvis/Desktop/demo-project/ai-chat/.claude/memory/)",
-      "Bash(mv /Users/elvis/.claude/projects/-Users-elvis-Desktop-demo-project-ai-chat/memory/MEMORY.md /Users/elvis/Desktop/demo-project/ai-chat/.claude/memory/)"
+      "Bash(mv /Users/elvis/.claude/projects/-Users-elvis-Desktop-demo-project-ai-chat/memory/MEMORY.md /Users/elvis/Desktop/demo-project/ai-chat/.claude/memory/)",
+      "Bash(ls -la /Users/elvis/Desktop/demo-project/ai-chat/venv/bin/python*)",
+      "Bash(brew list *)",
+      "Read(//Users/elvis/Library/Caches/com.apple.python/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "mcp__MiniMax__web_search"
     ]
   }
 }

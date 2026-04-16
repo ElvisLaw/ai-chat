@@ -48,7 +48,7 @@ class OpenAIClient(BaseLLMClient):
 
         Args:
             message: 用户消息。
-            **kwargs: 其他参数（system_prompt, model 覆盖等）。
+            **kwargs: 其他参数（system_prompt, model 覆盖等, conversation_messages 历史消息）。
 
         Returns:
             模型的响应文本。
@@ -58,9 +58,19 @@ class OpenAIClient(BaseLLMClient):
         """
         try:
             system_prompt = kwargs.pop("system_prompt", None)
+            conversation_messages = kwargs.pop("conversation_messages", None)
+
+            # 构建消息列表
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
+
+            # 添加历史消息（如果有多轮对话）
+            if conversation_messages:
+                for msg in conversation_messages:
+                    if msg["role"] != "system":
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+
             messages.append({"role": "user", "content": message})
 
             response = self._client.chat.completions.create(
@@ -77,7 +87,7 @@ class OpenAIClient(BaseLLMClient):
 
         Args:
             message: 用户消息。
-            **kwargs: 其他参数。
+            **kwargs: 其他参数（conversation_messages 历史消息）。
 
         Yields:
             响应内容块，逐块返回。
@@ -87,9 +97,19 @@ class OpenAIClient(BaseLLMClient):
         """
         try:
             system_prompt = kwargs.pop("system_prompt", None)
+            conversation_messages = kwargs.pop("conversation_messages", None)
+
+            # 构建消息列表
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
+
+            # 添加历史消息（如果有多轮对话）
+            if conversation_messages:
+                for msg in conversation_messages:
+                    if msg["role"] != "system":
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+
             messages.append({"role": "user", "content": message})
 
             stream = self._client.chat.completions.create(
