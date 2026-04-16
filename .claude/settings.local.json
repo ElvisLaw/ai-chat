@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm uninstall *)",
+      "Bash(openspec --version)",
+      "Bash(openspec new *)",
+      "Bash(openspec status *)",
+      "Bash(openspec instructions *)",
+      "Bash(openspec list *)",
+      "Bash(openspec archive *)",
+      "Bash(mv /Users/elvis/.claude/projects/-Users-elvis-Desktop-demo-project-ai-chat/memory/ai-chat-project-plan.md /Users/elvis/Desktop/demo-project/ai-chat/.claude/memory/)",
+      "Bash(mv /Users/elvis/.claude/projects/-Users-elvis-Desktop-demo-project-ai-chat/memory/MEMORY.md /Users/elvis/Desktop/demo-project/ai-chat/.claude/memory/)"
+    ]
+  }
+}
