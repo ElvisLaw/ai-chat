@@ -3,7 +3,7 @@
 import pytest
 from typer.testing import CliRunner
 
-from ai_chat.cli.main import app
+from app.cli.main import app
 
 runner = CliRunner()
 

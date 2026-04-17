@@ -11,11 +11,15 @@ from ..conversation import ChatService, InMemoryConversationStore
 from ..conversation.models import Role
 from ..settings import get_settings
 from .factory import create_llm_client_factory
+from .rag import rag_app
 
 console = Console()
 
 # 创建主 Typer app
 app = typer.Typer(help="AI Chat CLI - 与 AI 对话的终端界面")
+
+# 注册 RAG 子命令
+app.add_typer(rag_app, name="rag")
 
 
 class CLIChatService:

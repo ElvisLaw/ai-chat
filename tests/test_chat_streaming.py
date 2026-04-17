@@ -2,8 +2,8 @@ import threading
 
 from fastapi.testclient import TestClient
 
-from src.ai_chat.api.dependencies import get_chat_service
-from src.ai_chat.api.server import create_app
+from app.api.dependencies import get_chat_service
+from app.api.server import create_app
 
 
 class FakeStreamingService:

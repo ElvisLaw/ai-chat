@@ -8,8 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .models import HealthResponse
 from .routes.chat import router as chat_router
+from .routes.rag import router as rag_router
 from ..clients import create_llm_client, ConfigurationError
 from ..conversation import ChatService, InMemoryConversationStore
+from ..rag import RAGService
 from ..settings import get_settings
 
 
@@ -71,8 +73,10 @@ async def lifespan(app: FastAPI):
         store=store,
         llm_client_factory=_make_llm_client_factory(),
     )
+    rag_service = RAGService()
     app.state.store = store
     app.state.chat_service = service
+    app.state.rag_service = rag_service
     yield
     # 目前 InMemoryConversationStore 不需要清理
     # 后续接入 Redis/DB 时在此处清理连接
@@ -110,6 +114,7 @@ def create_app() -> FastAPI:
 
     # 注册路由
     app.include_router(chat_router)
+    app.include_router(rag_router)
 
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     async def health_check() -> HealthResponse:
@@ -133,7 +138,7 @@ if __name__ == "__main__":
 
     settings = get_settings()
     uvicorn.run(
-        "src.ai_chat.api.server:app",
+        "app.api.server:app",
         host=settings.api_host,
         port=settings.api_port,
         reload=True,

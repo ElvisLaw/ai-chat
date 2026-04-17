@@ -1,4 +1,4 @@
-from src.ai_chat.conversation import ChatService, InMemoryConversationStore
+from app.conversation import ChatService, InMemoryConversationStore
 
 
 class FakeStreamingClient:

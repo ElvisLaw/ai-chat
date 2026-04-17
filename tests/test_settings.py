@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from dotenv import dotenv_values
 
-from src.ai_chat import settings as settings_module
+from app import settings as settings_module
 
 
 ENV_KEY_TO_FIELD = {

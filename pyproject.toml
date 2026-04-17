@@ -31,6 +31,9 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "langchain>=0.1.0",
     "langchain-openai>=0.0.5",
+    "langchain-community>=0.0.20",
+    "langchain-text-splitters>=0.0.1",
+    "pypdf>=4.0.0",
     "typer>=0.9.0",
     "rich>=13.0.0",
     "fastapi>=0.100.0",
@@ -46,15 +49,15 @@ dev = [
 ]
 
 [project.scripts]
-ai-chat = "ai_chat.cli.main:app"
-ai-chat-interactive = "ai_chat.cli.main:interactive"
+ai-chat = "app.cli.main:app"
+ai-chat-interactive = "app.cli.main:interactive"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ai_chat"]
+packages = ["app"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/src",
+    "/app",
     "/README.md",
 ]
 
@@ -69,3 +72,9 @@ target-version = "py310"
 [tool.black]
 line-length = 100
 target-version = ["py310"]
+
+[tool.uvicorn]
+app = "app.api:app"
+host = "127.0.0.1"
+port = 8000
+reload = true

@@ -14,7 +14,7 @@
 - Uvicorn (uvicorn>=0.23.0)
 
 ## 项目结构
-- 源码: src/ai_chat/
+- 源码: app/
 - 测试: tests/
 - 配置: config/
 - 文档: docs/

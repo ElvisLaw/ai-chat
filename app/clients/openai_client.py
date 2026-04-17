@@ -66,6 +66,27 @@ class OpenAIClient(BaseLLMClient):
         except Exception as e:
             raise LLMError(f"OpenAI API error: {e}") from e
 
+    def embeddings(self, texts: list[str], model: str | None = None, **kwargs: Any) -> list[list[float]]:
+        """获取文本的 embeddings。
+
+        Args:
+            texts: 文本列表。
+            model: 嵌入模型名称（默认使用 text-embedding-3-small）。
+            **kwargs: 其他参数。
+
+        Returns:
+            嵌入向量列表。
+        """
+        try:
+            response = self._client.embeddings.create(
+                model=model or "text-embedding-3-small",
+                input=texts,
+                **kwargs
+            )
+            return [item.embedding for item in response.data]
+        except Exception as e:
+            raise LLMError(f"OpenAI Embeddings API error: {e}") from e
+
     def stream_message(self, messages: list[dict], **kwargs: Any) -> Iterator[str]:
         """流式接收响应内容块。
 

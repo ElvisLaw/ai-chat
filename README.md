@@ -51,7 +51,7 @@ pip install -e .
 ### 配置模块使用
 
 ```python
-from src.ai_chat.settings import get_settings
+from app.settings import get_settings
 
 # 获取 Settings 单例（首次调用自动加载 .env）
 settings = get_settings()
@@ -71,8 +71,8 @@ model = settings.get_default_model("anthropic") # claude-3-sonnet-20240229
 ### LLM 客户端使用
 
 ```python
-from src.ai_chat.settings import get_settings
-from src.ai_chat.clients import create_llm_client
+from app.settings import get_settings
+from app.clients import create_llm_client
 
 settings = get_settings()
 
@@ -103,10 +103,13 @@ export OPENAI_API_KEY=your-api-key
 export OPENAI_BASE_URL=https://api.minimaxi.com/v1  # MiniMax API
 
 # 启动服务
-uvicorn src.ai_chat.api.server:app --reload --host 0.0.0.0 --port 8000
+fastapi dev
+# 或
+uvicorn app.api:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **说明：**
+- `fastapi dev` 是 FastAPI CLI 开发模式，自动检测代码变化并热重载
 - `uvicorn` 是 ASGI 服务器，用于运行 FastAPI 应用
 - `--reload` 开启热更新，代码修改后自动重启
 - `--host 0.0.0.0` 允许外部访问
@@ -248,43 +251,48 @@ ruff check .
 
 ```
 ai-chat/
-├── src/
-│   └── ai_chat/
+├── app/                   # 应用代码
+│   ├── __init__.py
+│   ├── config.py           # 配置加载（简化版）
+│   ├── settings.py         # Pydantic Settings 单例（get_settings）
+│   ├── clients/            # LLM 客户端 ✓
+│   │   ├── __init__.py
+│   │   ├── base.py              # 抽象基类
+│   │   ├── openai_client.py     # OpenAI / MiniMax 客户端
+│   │   └── anthropic_client.py  # Anthropic 客户端
+│   ├── conversation/       # 对话管理 ✓
+│   │   ├── __init__.py
+│   │   ├── models.py            # 消息模型（Role, Conversation）
+│   │   ├── store.py             # 会话存储（InMemoryConversationStore）
+│   │   └── service.py           # 聊天服务（async + asyncio.to_thread）
+│   ├── api/              # Web API ✓
+│   │   ├── __init__.py
+│   │   ├── server.py            # FastAPI 主入口（lifespan 管理资源）
+│   │   ├── dependencies.py       # DI 依赖函数
+│   │   ├── models.py            # 请求/响应模型
+│   │   └── routes/
+│   │       ├── chat.py          # 聊天端点
+│   │       └── rag.py           # RAG 端点
+│   ├── cli/               # CLI 界面 ✓
+│   │   ├── __init__.py
+│   │   ├── main.py              # Typer 主入口
+│   │   ├── factory.py           # LLM 客户端工厂
+│   │   └── rag.py              # RAG CLI 命令
+│   ├── agent/             # LangChain Agent ✓
+│   │   ├── __init__.py
+│   │   ├── client.py            # Agent 客户端
+│   │   ├── factory.py           # Agent 工厂函数
+│   │   ├── service.py          # Agent 服务封装
+│   │   └── tools.py           # 内置工具集
+│   └── rag/                # RAG 模块 ✓
 │       ├── __init__.py
-│       ├── config.py           # 配置加载（简化版）
-│       ├── settings.py         # Pydantic Settings 单例（get_settings）
-│       ├── clients/            # LLM 客户端 ✓
-│       │   ├── __init__.py
-│       │   ├── base.py              # 抽象基类
-│       │   ├── openai_client.py     # OpenAI / MiniMax 客户端
-│       │   └── anthropic_client.py  # Anthropic 客户端
-│       ├── conversation/       # 对话管理 ✓
-│       │   ├── __init__.py
-│       │   ├── models.py            # 消息模型（Role, Conversation）
-│       │   ├── store.py             # 会话存储（InMemoryConversationStore）
-│       │   └── service.py           # 聊天服务（async + asyncio.to_thread）
-│       ├── api/              # Web API ✓
-│       │   ├── __init__.py
-│       │   ├── server.py            # FastAPI 主入口（lifespan 管理资源）
-│       │   ├── dependencies.py       # DI 依赖函数
-│       │   ├── models.py            # 请求/响应模型
-│       │   └── routes/
-│       │       └── chat.py          # 聊天端点（_stream_sse 后台线程桥接）
-│       └── cli/               # CLI 界面 ✓
-│           ├── __init__.py
-│           ├── main.py              # Typer 主入口
-│           └── factory.py           # LLM 客户端工厂
-│       └── agent/             # LangChain Agent ✓
-│           ├── __init__.py
-│           ├── client.py            # Agent 客户端
-│           ├── factory.py           # Agent 工厂函数
-│           ├── service.py          # Agent 服务封装
-│           └── tools.py           # 内置工具集
+│       ├── loader.py           # 文档加载器
+│       ├── splitter.py         # 文本分割器
+│       ├── store.py           # 向量存储
+│       ├── retriever.py       # 检索器
+│       └── service.py         # RAG 服务
 ├── tests/                 # 测试文件 ✓
-│   ├── test_settings.py
-│   ├── test_conversation_service.py
-│   ├── test_chat_streaming.py
-│   └── test_cli.py             # CLI 测试
+├── main.py                # FastAPI 入口点
 ├── openspec/              # OpenSpec 工作流
 ├── pyproject.toml         # 项目配置
 ├── requirements.txt       # 依赖列表

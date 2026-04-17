@@ -22,7 +22,7 @@ Pydantic v2 (2.13+) 将 BaseSettings 从主包移除了。需要安装 pydantic-
 
 ### Metadata
 - Source: error
-- Related Files: src/ai_chat/settings.py
+- Related Files: app/settings.py
 - Tags: pydantic, settings, migration
 
 ---
@@ -83,7 +83,7 @@ LLM 客户端接口变更需要支持多轮对话上下文
 
 ### Metadata
 - Source: error
-- Related Files: src/ai_chat/clients/openai_client.py, src/ai_chat/clients/anthropic_client.py
+- Related Files: app/clients/openai_client.py, app/clients/anthropic_client.py
 - Tags: llm, multi-turn, conversation
 
 ---
