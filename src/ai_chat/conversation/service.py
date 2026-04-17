@@ -1,9 +1,11 @@
 """聊天服务模块。"""
 
-from typing import Callable, Iterator, Any
+import asyncio
+from typing import Any, Callable, Iterator
 
 from .models import Role, Conversation
 from .store import ConversationStore
+from ..settings import get_settings
 
 
 class ChatService:
@@ -25,7 +27,7 @@ class ChatService:
         self._store = store
         self._llm_client_factory = llm_client_factory
 
-    def chat(
+    async def chat(
         self,
         message: str,
         provider: str = "openai",
@@ -33,7 +35,7 @@ class ChatService:
         system_prompt: str | None = None,
         model: str | None = None,
     ) -> tuple[str, str]:
-        """处理聊天请求（同步模式）。
+        """处理聊天请求（异步模式，通过线程池执行同步 SDK）。
 
         Args:
             message: 用户消息。
@@ -65,18 +67,16 @@ class ChatService:
         # 获取 LLM 客户端
         client = self._llm_client_factory(provider)
 
-        # 如果没有指定模型，使用默认模型
+        # 如果没有指定模型，使用 provider 的默认模型
         if model is None:
-            from ai_chat.settings import Settings
-            model = Settings().model
+            model = get_settings().get_default_model(provider)
 
         messages_for_llm = conv.get_messages_for_llm(system_prompt)
 
-        response = client.send_message(
-            message=message,
-            system_prompt=system_prompt,
+        response = await asyncio.to_thread(
+            client.send_message,
+            messages=messages_for_llm,
             model=model,
-            conversation_messages=messages_for_llm if len(conv.messages) > 1 else None,
         )
 
         # 添加助手回复
@@ -93,7 +93,7 @@ class ChatService:
         system_prompt: str | None = None,
         model: str | None = None,
     ) -> tuple[Iterator[str], str]:
-        """处理流式聊天请求。
+        """处理流式聊天请求（在线程池执行同步 SDK，不阻塞事件循环）。
 
         Args:
             message: 用户消息。
@@ -124,19 +124,21 @@ class ChatService:
 
         # 调用 LLM
         client = self._llm_client_factory(provider)
+
+        # 如果没有指定模型，使用 provider 的默认模型
+        if model is None:
+            model = get_settings().get_default_model(provider)
+
         messages_for_llm = conv.get_messages_for_llm(system_prompt)
 
         def generate() -> Iterator[str]:
             full_response = ""
             for chunk in client.stream_message(
-                message=message,
-                system_prompt=system_prompt,
+                messages=messages_for_llm,
                 model=model,
-                conversation_messages=messages_for_llm if len(conv.messages) > 1 else None,
             ):
                 full_response += chunk
                 yield chunk
-
             # 保存助手回复
             conv.add_message(Role.assistant, full_response)
             self._store.save(conv)

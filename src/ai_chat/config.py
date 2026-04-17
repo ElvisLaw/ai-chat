@@ -1,32 +1,16 @@
-from pathlib import Path
 from dotenv import load_dotenv
+
+from .settings import ENV_FILE, get_settings
 
 
 def load_config() -> None:
-    """Load configuration from .env file.
+    """Compatibility helper that reuses the shared settings source."""
+    get_settings()
 
-    This function searches for a .env file in the project root
-    and loads all environment variables from it.
-    """
-    # Find the project root (where .env should be located)
-    # src/ai_chat/config.py -> src/ai_chat -> src -> project root
-    current_dir = Path(__file__).parent
-    project_root = current_dir.parent.parent
-
-    # Check project root for .env
-    env_path = project_root / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
+    if ENV_FILE.exists():
+        load_dotenv(ENV_FILE)
         return
 
-    # Fallback: check src/ directory (if .env is alongside src/)
-    src_dir = current_dir.parent
-    env_path_src = src_dir / ".env"
-    if env_path_src.exists():
-        load_dotenv(env_path_src)
-        return
-
-    # Last fallback: current directory
     load_dotenv()
 
 

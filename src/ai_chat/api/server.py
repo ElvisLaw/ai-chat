@@ -1,28 +1,75 @@
 """FastAPI 应用主入口。"""
 
-import os
 from contextlib import asynccontextmanager
+from typing import Callable
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .models import HealthResponse
 from .routes.chat import router as chat_router
+from ..clients import create_llm_client, ConfigurationError
+from ..conversation import ChatService, InMemoryConversationStore
+from ..settings import get_settings
 
 
-def load_config() -> None:
-    """加载配置（延迟导入避免循环依赖）。"""
-    from ..config import load_config as _load
-    _load()
+def _get_llm_client(provider: str) -> object:
+    """获取 LLM 客户端实例。
+
+    Args:
+        provider: LLM 提供商名称。
+
+    Returns:
+        LLM 客户端实例。
+
+    Raises:
+        HTTPException: 如果配置缺失或不支持的提供商。
+    """
+    settings = get_settings()
+
+    try:
+        if provider == "openai":
+            api_key = settings.openai_api_key
+            base_url = settings.openai_base_url
+            if not api_key:
+                raise RuntimeError("OpenAI API key not configured")
+            return create_llm_client("openai", api_key, base_url=base_url)
+        elif provider == "anthropic":
+            api_key = settings.anthropic_api_key
+            if not api_key:
+                raise RuntimeError("Anthropic API key not configured")
+            return create_llm_client("anthropic", api_key)
+        else:
+            raise RuntimeError(f"Unsupported provider: {provider}")
+    except ConfigurationError as e:
+        raise RuntimeError(str(e)) from e
+
+
+def _make_llm_client_factory() -> "Callable[[str], object]":
+    """创建 LLM 客户端工厂函数。"""
+    return _get_llm_client
+
+
+# 全局应用实例（lifespan 管理其 state）
+_app_instance: FastAPI | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理。"""
-    # 启动时加载配置
-    load_config()
+    """应用生命周期管理。
+
+    在应用启动时创建 store 和 service，存入 app.state。
+    """
+    store = InMemoryConversationStore()
+    service = ChatService(
+        store=store,
+        llm_client_factory=_make_llm_client_factory(),
+    )
+    app.state.store = store
+    app.state.chat_service = service
     yield
-    # 关闭时清理资源（如有需要）
+    # 目前 InMemoryConversationStore 不需要清理
+    # 后续接入 Redis/DB 时在此处清理连接
 
 
 def create_app() -> FastAPI:
@@ -31,6 +78,10 @@ def create_app() -> FastAPI:
     Returns:
         配置好的 FastAPI 实例。
     """
+    global _app_instance
+
+    settings = get_settings()
+
     app = FastAPI(
         title="AI Chat API",
         description="AI Chat 应用的 Web API 接口",
@@ -39,8 +90,8 @@ def create_app() -> FastAPI:
     )
 
     # 配置 CORS 中间件
-    cors_origins = os.getenv("CORS_ORIGINS", "*")
-    if cors_origins != "*":
+    cors_origins = settings.cors_origins
+    if isinstance(cors_origins, str) and cors_origins != "*":
         cors_origins = cors_origins.split(",")
 
     app.add_middleware(
@@ -63,6 +114,7 @@ def create_app() -> FastAPI:
         """
         return HealthResponse(status="ok")
 
+    _app_instance = app
     return app
 
 
@@ -73,12 +125,10 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
 
-    host = os.getenv("API_HOST", "0.0.0.0")
-    port = int(os.getenv("API_PORT", "8000"))
-
+    settings = get_settings()
     uvicorn.run(
         "src.ai_chat.api.server:app",
-        host=host,
-        port=port,
+        host=settings.api_host,
+        port=settings.api_port,
         reload=True,
     )

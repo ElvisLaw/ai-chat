@@ -23,11 +23,11 @@ class BaseLLMClient(ABC):
     """
 
     @abstractmethod
-    def send_message(self, message: str, **kwargs) -> str:
+    def send_message(self, messages: list[dict], **kwargs) -> str:
         """发送消息并获取响应。
 
         Args:
-            message: 用户消息文本。
+            messages: 已组装好的消息列表。
             **kwargs: 提供商特定的其他参数。
 
         Returns:
@@ -40,11 +40,11 @@ class BaseLLMClient(ABC):
         pass
 
     @abstractmethod
-    def stream_message(self, message: str, **kwargs) -> Iterator[str]:
+    def stream_message(self, messages: list[dict], **kwargs) -> Iterator[str]:
         """发送消息并流式接收响应。
 
         Args:
-            message: 用户消息文本。
+            messages: 已组装好的消息列表。
             **kwargs: 提供商特定的其他参数。
 
         Yields:

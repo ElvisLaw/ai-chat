@@ -16,7 +16,8 @@
       "Read(//Users/elvis/Library/Caches/com.apple.python/**)",
       "Read(//usr/local/bin/**)",
       "Read(//opt/homebrew/bin/**)",
-      "mcp__MiniMax__web_search"
+      "mcp__MiniMax__web_search",
+      "Bash(curl -s -X POST http://localhost:8000/chat -H 'Content-Type: application/json' -d '{\"message\": \"我叫 Elvis，第一轮对话\"}')"
     ]
   }
 }

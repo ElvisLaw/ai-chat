@@ -43,12 +43,12 @@ class OpenAIClient(BaseLLMClient):
         self._model = model
         self._kwargs = kwargs
 
-    def send_message(self, message: str, **kwargs: Any) -> str:
+    def send_message(self, messages: list[dict], **kwargs: Any) -> str:
         """发送消息并接收响应。
 
         Args:
-            message: 用户消息。
-            **kwargs: 其他参数（system_prompt, model 覆盖等, conversation_messages 历史消息）。
+            messages: 完整消息历史列表（包含 system、user、assistant 消息）。
+            **kwargs: 其他参数（model 覆盖等）。
 
         Returns:
             模型的响应文本。
@@ -57,22 +57,6 @@ class OpenAIClient(BaseLLMClient):
             LLMError: API 调用失败。
         """
         try:
-            system_prompt = kwargs.pop("system_prompt", None)
-            conversation_messages = kwargs.pop("conversation_messages", None)
-
-            # 构建消息列表
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-
-            # 添加历史消息（如果有多轮对话）
-            if conversation_messages:
-                for msg in conversation_messages:
-                    if msg["role"] != "system":
-                        messages.append({"role": msg["role"], "content": msg["content"]})
-
-            messages.append({"role": "user", "content": message})
-
             response = self._client.chat.completions.create(
                 model=kwargs.pop("model", self._model),
                 messages=messages,
@@ -82,12 +66,12 @@ class OpenAIClient(BaseLLMClient):
         except Exception as e:
             raise LLMError(f"OpenAI API error: {e}") from e
 
-    def stream_message(self, message: str, **kwargs: Any) -> Iterator[str]:
+    def stream_message(self, messages: list[dict], **kwargs: Any) -> Iterator[str]:
         """流式接收响应内容块。
 
         Args:
-            message: 用户消息。
-            **kwargs: 其他参数（conversation_messages 历史消息）。
+            messages: 完整消息历史列表。
+            **kwargs: 其他参数（model 覆盖等）。
 
         Yields:
             响应内容块，逐块返回。
@@ -96,22 +80,6 @@ class OpenAIClient(BaseLLMClient):
             LLMError: API 调用失败。
         """
         try:
-            system_prompt = kwargs.pop("system_prompt", None)
-            conversation_messages = kwargs.pop("conversation_messages", None)
-
-            # 构建消息列表
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-
-            # 添加历史消息（如果有多轮对话）
-            if conversation_messages:
-                for msg in conversation_messages:
-                    if msg["role"] != "system":
-                        messages.append({"role": msg["role"], "content": msg["content"]})
-
-            messages.append({"role": "user", "content": message})
-
             stream = self._client.chat.completions.create(
                 model=kwargs.pop("model", self._model),
                 messages=messages,

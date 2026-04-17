@@ -1,73 +1,66 @@
 """聊天路由模块。"""
 
-from typing import Iterator
+import asyncio
+import threading
+from typing import AsyncIterator, Iterator
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
+from ..dependencies import get_chat_service
 from ..models import ChatRequest, ChatResponse, ErrorResponse
-from ...clients import create_llm_client, ConfigurationError
-from ...conversation import ChatService, InMemoryConversationStore
-
-
-# 全局聊天服务和会话存储
-_store = InMemoryConversationStore()
-_chat_service = ChatService(
-    store=_store,
-    llm_client_factory=lambda provider: _get_llm_client(provider)
-)
-
-
-def _get_llm_client(provider: str) -> object:
-    """获取 LLM 客户端实例。
-
-    Args:
-        provider: LLM 提供商名称。
-
-    Returns:
-        LLM 客户端实例。
-
-    Raises:
-        HTTPException: 如果配置缺失或不支持的提供商。
-    """
-    from .. import load_config
-    load_config()
-    from ...settings import Settings
-    settings = Settings()
-
-    try:
-        if provider == "openai":
-            api_key = settings.openai_api_key
-            base_url = settings.openai_base_url
-            if not api_key:
-                raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-            return create_llm_client("openai", api_key, base_url=base_url)
-        elif provider == "anthropic":
-            api_key = settings.anthropic_api_key
-            if not api_key:
-                raise HTTPException(status_code=500, detail="Anthropic API key not configured")
-            return create_llm_client("anthropic", api_key)
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
-    except ConfigurationError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+from ...conversation import ChatService
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
+async def _stream_sse(generator: Iterator[str], conversation_id: str) -> AsyncIterator[str]:
+    """将同步生成器桥接为异步 SSE 输出。"""
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue[object] = asyncio.Queue()
+    done = object()
+
+    def publish(item: object) -> None:
+        loop.call_soon_threadsafe(queue.put_nowait, item)
+
+    def consume() -> None:
+        try:
+            for chunk in generator:
+                publish(chunk)
+        except Exception as exc:
+            publish(exc)
+        finally:
+            publish(done)
+
+    threading.Thread(target=consume, daemon=True).start()
+
+    yield f"data: {conversation_id}\n\n"
+
+    while True:
+        item = await queue.get()
+        if item is done:
+            break
+        if isinstance(item, Exception):
+            raise item
+        yield f"data: {item}\n\n"
+
+    yield "data: [DONE]\n\n"
+
+
 @router.post("", response_model=ChatResponse, responses={500: {"model": ErrorResponse}})
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(request: ChatRequest, service: ChatService = Depends(get_chat_service)) -> ChatResponse:
     """处理聊天请求（同步模式）。
 
     Args:
         request: 聊天请求。
+        service: 通过 DI 注入的 ChatService 实例。
 
     Returns:
         AI 的回复内容和会话 ID。
     """
     try:
-        response, conversation_id = _chat_service.chat(
+        response, conversation_id = await service.chat(
             message=request.message,
             provider=request.provider or "openai",
             conversation_id=request.conversation_id,
@@ -82,17 +75,18 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
 
 @router.post("/stream")
-async def chat_stream(request: ChatRequest) -> StreamingResponse:
+async def chat_stream(request: ChatRequest, service: ChatService = Depends(get_chat_service)) -> StreamingResponse:
     """处理聊天请求（流式 SSE 模式）。
 
     Args:
         request: 聊天请求。
+        service: 通过 DI 注入的 ChatService 实例。
 
     Returns:
         SSE 流式响应。
     """
     try:
-        generator, conversation_id = _chat_service.stream(
+        generator, conversation_id = service.stream(
             message=request.message,
             provider=request.provider or "openai",
             conversation_id=request.conversation_id,
@@ -100,16 +94,8 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             model=request.model,
         )
 
-        def generate() -> Iterator[str]:
-            # 先发送 conversation_id
-            yield f"data: {conversation_id}\n\n"
-            # 然后发送流式内容
-            for chunk in generator:
-                yield f"data: {chunk}\n\n"
-            yield "data: [DONE]\n\n"
-
         return StreamingResponse(
-            generate(),
+            _stream_sse(generator, conversation_id),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
         )
