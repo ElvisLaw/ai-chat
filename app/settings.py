@@ -16,7 +16,7 @@ DEFAULT_MODELS = {
     "anthropic": "claude-3-sonnet-20240229",
 }
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = PROJECT_ROOT / ".env"
 
 # Settings singleton instance
