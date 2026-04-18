@@ -78,6 +78,49 @@ class Settings(BaseSettings):
         validation_alias="MAX_TOKENS"
     )
 
+    # Memory settings
+    memory_buffer_size: int = Field(
+        default=20,
+        validation_alias="MEMORY_BUFFER_SIZE",
+        description="对话缓冲最大消息数"
+    )
+
+    memory_max_tokens: int = Field(
+        default=4000,
+        validation_alias="MEMORY_MAX_TOKENS",
+        description="对话缓冲最大 Token 数"
+    )
+
+    memory_summarize_threshold_messages: int = Field(
+        default=15,
+        validation_alias="MEMORY_SUMMARIZE_THRESHOLD_MESSAGES",
+        description="触发摘要的消息数阈值"
+    )
+
+    memory_summarize_threshold_tokens: int = Field(
+        default=3000,
+        validation_alias="MEMORY_SUMMARIZE_THRESHOLD_TOKENS",
+        description="触发摘要的 Token 数阈值"
+    )
+
+    memory_retain_recent: int = Field(
+        default=5,
+        validation_alias="MEMORY_RETAIN_RECENT",
+        description="摘要后保留的最新消息数"
+    )
+
+    memory_summary_max_chars: int = Field(
+        default=2000,
+        validation_alias="MEMORY_SUMMARY_MAX_CHARS",
+        description="摘要最大字符数（约 500 字）"
+    )
+
+    conversation_store_type: str = Field(
+        default="memory",
+        validation_alias="CONVERSATION_STORE_TYPE",
+        description="会话存储类型: memory 或 file"
+    )
+
     temperature: float = Field(
         default=0.7,
         validation_alias="TEMPERATURE"

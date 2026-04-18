@@ -1,11 +1,16 @@
 """聊天服务模块。"""
 
 import asyncio
+import logging
 from typing import Any, Callable, Iterator
 
+from .memory import ConversationBuffer, MemorySummarizer
 from .models import Role, Conversation
 from .store import ConversationStore
 from ..settings import get_settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class ChatService:
@@ -26,6 +31,22 @@ class ChatService:
         """
         self._store = store
         self._llm_client_factory = llm_client_factory
+        self._buffer = ConversationBuffer()
+        self._summarizer = MemorySummarizer(llm_client_factory)
+
+    def _maybe_summarize(self, conversation: Conversation, provider: str) -> None:
+        """检查并执行摘要。
+
+        Args:
+            conversation: 会话对象。
+            provider: LLM 提供商。
+        """
+        if self._summarizer.should_summarize(conversation):
+            try:
+                self._summarizer.summarize(conversation, provider)
+                logger.info(f"Conversation {conversation.id} summarized")
+            except Exception as e:
+                logger.error(f"Failed to summarize conversation {conversation.id}: {e}")
 
     async def chat(
         self,
@@ -58,6 +79,9 @@ class ChatService:
         # 添加用户消息
         conv.add_message(Role.user, message)
 
+        # 消息缓冲管理
+        self._buffer.buffer_messages(conv)
+
         # 检查消息数量限制
         if len(conv.messages) > self.MAX_MESSAGES_PER_CONVERSATION:
             raise ValueError(
@@ -81,7 +105,16 @@ class ChatService:
 
         # 添加助手回复
         conv.add_message(Role.assistant, response)
+
+        # 持久化保存
         self._store.save(conv)
+
+        # 检查是否需要摘要（摘要可能修改 messages）
+        self._maybe_summarize(conv, provider)
+
+        # 如果生成了摘要，再次保存
+        if conv.is_summarized:
+            self._store.save(conv)
 
         return response, conv.id
 
@@ -116,6 +149,9 @@ class ChatService:
         # 添加用户消息
         conv.add_message(Role.user, message)
 
+        # 消息缓冲管理
+        self._buffer.buffer_messages(conv)
+
         # 检查消息数量限制
         if len(conv.messages) > self.MAX_MESSAGES_PER_CONVERSATION:
             raise ValueError(
@@ -141,6 +177,12 @@ class ChatService:
                 yield chunk
             # 保存助手回复
             conv.add_message(Role.assistant, full_response)
+            # 持久化保存
             self._store.save(conv)
+            # 检查是否需要摘要（摘要可能修改 messages）
+            self._maybe_summarize(conv, provider)
+            # 如果生成了摘要，再次保存
+            if conv.is_summarized:
+                self._store.save(conv)
 
         return generate(), conv.id

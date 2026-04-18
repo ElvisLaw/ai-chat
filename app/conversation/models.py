@@ -1,10 +1,15 @@
 """消息和会话数据模型。"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Annotated
 
 from pydantic import BaseModel, Field
+
+
+def _utc_now() -> datetime:
+    """返回当前 UTC 时间（timezone-aware）。"""
+    return datetime.now(timezone.utc)
 
 
 class Role(str, Enum):
@@ -20,7 +25,7 @@ class Message(BaseModel):
 
     role: Role = Field(..., description="消息角色")
     content: str = Field(..., description="消息内容")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="创建时间")
+    timestamp: datetime = Field(default_factory=_utc_now, description="创建时间")
 
     model_config = {
         "json_schema_extra": {
@@ -38,8 +43,9 @@ class Conversation(BaseModel):
 
     id: str = Field(default_factory=lambda: __import__("uuid").uuid4().hex, description="会话 ID")
     messages: list[Message] = Field(default_factory=list, description="消息列表")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="创建时间")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="最后更新时间")
+    created_at: datetime = Field(default_factory=_utc_now, description="创建时间")
+    updated_at: datetime = Field(default_factory=_utc_now, description="最后更新时间")
+    is_summarized: bool = Field(default=False, description="是否已生成摘要")
 
     model_config = {
         "json_schema_extra": {
@@ -64,7 +70,7 @@ class Conversation(BaseModel):
         """
         message = Message(role=role, content=content)
         self.messages.append(message)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
         return message
 
     def get_messages_for_llm(self, system_prompt: str | None = None) -> list[dict]:

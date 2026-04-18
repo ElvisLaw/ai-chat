@@ -8,9 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .models import HealthResponse
 from .routes.chat import router as chat_router
+from .routes.conversation import router as conversation_router
 from .routes.rag import router as rag_router
 from ..clients import create_llm_client, ConfigurationError
-from ..conversation import ChatService, InMemoryConversationStore
+from ..conversation import ChatService, ConversationStoreFactory
 from ..rag import RAGService
 from ..settings import get_settings
 
@@ -68,7 +69,8 @@ async def lifespan(app: FastAPI):
 
     在应用启动时创建 store 和 service，存入 app.state。
     """
-    store = InMemoryConversationStore()
+    settings = get_settings()
+    store = ConversationStoreFactory.create(settings.conversation_store_type)
     service = ChatService(
         store=store,
         llm_client_factory=_make_llm_client_factory(),
@@ -78,8 +80,7 @@ async def lifespan(app: FastAPI):
     app.state.chat_service = service
     app.state.rag_service = rag_service
     yield
-    # 目前 InMemoryConversationStore 不需要清理
-    # 后续接入 Redis/DB 时在此处清理连接
+    # 清理资源（file store 不需要额外清理）
 
 
 def create_app() -> FastAPI:
@@ -114,6 +115,7 @@ def create_app() -> FastAPI:
 
     # 注册路由
     app.include_router(chat_router)
+    app.include_router(conversation_router)
     app.include_router(rag_router)
 
     @app.get("/health", response_model=HealthResponse, tags=["health"])

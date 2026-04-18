@@ -45,12 +45,12 @@
 - 2026-04-17-fix-streaming-thread-and-settings-loading (archived) — _stream_sse 后台线程桥接
 - 2026-04-17-improve-dependency-injection (archived) — lifespan + app.state + Depends()
 - 2026-04-17-implement-cli-interface (archived) — CLI 命令行界面（Typer + Rich）
+- 2026-04-17-implement-rag-support (archived) — RAG 支持（文档加载/分割/向量存储/检索）
+- 2026-04-17-refactor-project-structure (archived) — 项目结构重构（src/ai_chat → app）
 
 ### 待实现 Changes
-- implement-langchain-agent
-- implement-rag-support
-- implement-conversation-memory
-- implement-tool-calling
+- implement-conversation-memory — 多轮对话记忆
+- implement-tool-calling — 工具调用功能
 
 ## 开发习惯
 - 每次开发新功能前先创建 OpenSpec change

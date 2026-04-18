@@ -4,7 +4,12 @@
 """
 
 from .models import Role, Message, Conversation
-from .store import ConversationStore, InMemoryConversationStore
+from .store import (
+    ConversationStore,
+    InMemoryConversationStore,
+    FileConversationStore,
+    ConversationStoreFactory,
+)
 from .service import ChatService
 
 __all__ = [
@@ -13,5 +18,7 @@ __all__ = [
     "Conversation",
     "ConversationStore",
     "InMemoryConversationStore",
+    "FileConversationStore",
+    "ConversationStoreFactory",
     "ChatService",
 ]

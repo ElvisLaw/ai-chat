@@ -6,8 +6,9 @@ from typing import Annotated
 import typer
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.table import Table
 
-from ..conversation import ChatService, InMemoryConversationStore
+from ..conversation import ChatService, ConversationStoreFactory
 from ..conversation.models import Role
 from ..settings import get_settings
 from .factory import create_llm_client_factory
@@ -28,10 +29,12 @@ class CLIChatService:
     def __init__(self):
         settings = get_settings()
         factory = create_llm_client_factory(settings)
+        store = ConversationStoreFactory.create(settings.conversation_store_type)
         self._service = ChatService(
-            store=InMemoryConversationStore(),
+            store=store,
             llm_client_factory=factory,
         )
+        self._store = store
         self._conversation_id: str | None = None
 
     async def chat(
@@ -89,6 +92,18 @@ class CLIChatService:
     def clear_history(self) -> None:
         """清除会话历史。"""
         self._conversation_id = None
+
+    def list_conversations(self) -> list[dict]:
+        """列出所有会话。"""
+        return [
+            {
+                "id": conv.id,
+                "message_count": len(conv.messages),
+                "is_summarized": conv.is_summarized,
+                "updated_at": conv.updated_at.isoformat(),
+            }
+            for conv in self._store.list()
+        ]
 
 
 # 全局 CLI 服务实例
@@ -268,18 +283,68 @@ def _show_history(service: CLIChatService) -> None:
 
 
 @app.command(name="history")
-def history_cmd() -> None:
-    """显示当前会话的对话历史。"""
+def history_cmd(
+    list_all: Annotated[bool, typer.Option(help="列出所有会话")] = False,
+) -> None:
+    """显示当前会话的对话历史，或列出所有会话。"""
     service = get_chat_service()
-    _show_history(service)
+
+    if list_all:
+        _show_all_conversations(service)
+    else:
+        _show_history(service)
+
+
+def _show_all_conversations(service: CLIChatService) -> None:
+    """显示所有会话列表。"""
+    conversations = service.list_conversations()
+    if not conversations:
+        console.print("[dim]暂无会话记录[/dim]")
+        return
+
+    table = Table(title="会话列表")
+    table.add_column("ID", style="cyan", no_wrap=True)
+    table.add_column("消息数", style="magenta")
+    table.add_column("已摘要", style="green")
+    table.add_column("最后更新", style="dim")
+
+    for conv in conversations:
+        table.add_row(
+            conv["id"][:8] + "...",
+            str(conv["message_count"]),
+            "是" if conv["is_summarized"] else "否",
+            conv["updated_at"],
+        )
+
+    console.print(table)
 
 
 @app.command(name="clear")
-def clear_cmd() -> None:
-    """清除当前会话的对话历史。"""
+def clear_cmd(
+    conversation_id: Annotated[str | None, typer.Option(help="指定会话 ID")] = None,
+    all: Annotated[bool, typer.Option(help="清除所有会话")] = False,
+) -> None:
+    """清除当前会话的对话历史，或清除指定/所有会话。"""
     service = get_chat_service()
-    service.clear_history()
-    console.print("[dim]历史已清除[/dim]")
+
+    if all:
+        # 清除所有会话
+        conversations = service.list_conversations()
+        for conv in conversations:
+            service._store.delete(conv["id"])
+        console.print(f"[dim]已清除 {len(conversations)} 个会话[/dim]")
+    elif conversation_id:
+        # 清除指定会话
+        deleted = service._store.delete(conversation_id)
+        if deleted:
+            console.print(f"[dim]会话 {conversation_id} 已清除[/dim]")
+        else:
+            console.print(f"[red]会话 {conversation_id} 不存在[/red]")
+            raise typer.Exit(1)
+    else:
+        # 清除当前会话
+        service.clear_history()
+        console.print("[dim]历史已清除[/dim]")
 
 
 if __name__ == "__main__":
